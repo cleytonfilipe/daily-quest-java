@@ -4,18 +4,52 @@ public class DailyQuest {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        String nome = "Cleyton";
-        int nivel = 1;
-        int xp = 0;
+        System.out.println("=== BEM-VINDO JOGADOR! ===");
+        System.out.println();
+        System.out.println("Antes de começar vamos, criar seu perfil");
+        System.out.println();
+        System.out.print("Qual o seu nome de jogador? ");   
 
-        String[] missoes = {
-            "Estudar Java por 30 minutos",
-            "Ir para academia",
-            "Trabalhar"
+        String nome = scanner.nextLine();
+
+        System.out.println();
+
+        
+        System.out.printf("Certo %s, agora me diz, quais objetivos você quer focar?\n", nome);
+        System.out.println();
+
+        String[] objetivos = {
+            "Estudar mais",
+            "Treinar com consistência",
+            "Organizar minha rotina",
+            "Ser mais produtivo no trabalho",
+            "Melhorar hábitos de saúde"
         };
 
-        boolean[] concluidas = {false, false, false};
-        int recompensaXp = 250;
+        boolean[] objetivosEscolhidos = {false, false, false, false, false};
+
+        for (int i = 0; i < objetivos.length; i++) {
+            System.out.println((i + 1) + " - " + objetivos[i]);
+        }
+
+        System.out.println();
+        System.out.print("Digite o número do objetivo que deseja escolher: ");
+        int objetivo = scanner.nextInt();
+
+        int indice = objetivo - 1;
+
+        if (indice >= 0 && indice < objetivos.length) {
+            objetivosEscolhidos[indice] = true;
+            System.out.println();
+            System.out.println("Objetivo escolhido: " + objetivos[indice]);
+        } else {
+            System.out.println();
+            System.out.println("Opção inválida.");
+        }
+        
+    /*  int nivel = 1;
+     *   int xp = 0;
+     *   int recompensaXp = 250;
 
         int opcao;
 
@@ -78,7 +112,7 @@ public class DailyQuest {
                 System.out.println("Opção inválida.");
             }
         } while (opcao != 0);
-
+    */
         scanner.close();
     }
 }
