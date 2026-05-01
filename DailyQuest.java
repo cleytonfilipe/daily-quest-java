@@ -8,8 +8,13 @@ public class DailyQuest {
         int nivel = 1;
         int xp = 0;
 
-        String missao = "Estudar Java por 30 minutos";
-        boolean missaoConcluida = false;
+        String[] missoes = {
+            "Estudar Java por 30 minutos",
+            "Ir para academia",
+            "Trabalhar"
+        };
+
+        boolean[] concluidas = {false, false, false};
         int recompensaXp = 250;
 
         int opcao;
@@ -29,29 +34,43 @@ public class DailyQuest {
                 System.out.println("Nível: " + nivel);
                 System.out.println("XP: " + xp);
             } else if (opcao == 2) {
-                System.out.println("\nMissão: " + missao);
-                System.out.println("Recompensa: " + recompensaXp + " XP");
-
-                if (missaoConcluida) {
-                    System.out.println("Status: Concluída");
-                } else {
-                    System.out.println("Status: Pendente");
+                for (int i = 0; i < missoes.length; i++) {
+                    if (concluidas[i]) {
+                        System.out.println((i + 1) + " - " + missoes[i] + " - Concluída");
+                    } else {
+                        System.out.println((i + 1) + " - " + missoes[i] + " - Pendente");
+                    }
                 }
             } else if (opcao == 3) {
-                if (!missaoConcluida) {
-                    missaoConcluida = true;
-                    xp += recompensaXp;
+                System.out.println("\nQual missão deseja concluir?");
 
-                    System.out.println("\nMissão Concluída!");
-                    System.out.println("Você ganhou " + recompensaXp + " XP.");
+                for (int i = 0; i < missoes.length; i++) {
+                    System.out.println((i + 1) + " - " + missoes[i]);
+                }
 
-                    while (xp >= 100) {
-                        nivel++;
-                        xp -= 100;
-                        System.out.println("Parabéns! Você subiu para o nível " + nivel);
+                System.out.print("Digite o número da missão: ");
+                int escolha = scanner.nextInt();
+
+                int indice = escolha - 1;
+
+                if (indice >= 0 && indice < missoes.length) {
+                    if (!concluidas[indice]) {
+                        concluidas[indice] = true;
+                        xp += recompensaXp;
+
+                        System.out.println("\nMissão concluída: " + missoes[indice]);
+                        System.out.println("Você ganhou " + recompensaXp + " XP.");
+
+                        while (xp >= 100) {
+                            nivel++;
+                            xp -= 100;
+                            System.out.println("Parabéns! Você subiu para o nível " + nivel + "!");
+                        }
+                    } else {
+                        System.out.println("\nEssa missão já foi concluída.");
                     }
                 } else {
-                    System.out.println("\nEssa missão já foi concluída.");
+                    System.out.println("\nMissão inválida.");
                 }
             } else if (opcao == 0) {
                 System.out.println("\nSaindo do Daily Quest...");
