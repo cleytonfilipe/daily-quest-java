@@ -32,19 +32,42 @@ public class DailyQuest {
             System.out.println((i + 1) + " - " + objetivos[i]);
         }
 
-        System.out.println();
-        System.out.print("Digite o número do objetivo que deseja escolher: ");
-        int objetivo = scanner.nextInt();
+        int objetivo;
 
-        int indice = objetivo - 1;
+        do {
+            System.out.println();
+            System.out.print("Digite o número do objetivo que deseja escolher ou 0 para finalizar: ");
+            objetivo = scanner.nextInt();
 
-        if (indice >= 0 && indice < objetivos.length) {
-            objetivosEscolhidos[indice] = true;
-            System.out.println();
-            System.out.println("Objetivo escolhido: " + objetivos[indice]);
-        } else {
-            System.out.println();
-            System.out.println("Opção inválida.");
+            if (objetivo == 0) {
+                System.out.println("\nFinalizando escolhas de objetivos...");
+            } else {
+                int indice = objetivo - 1;
+
+                if (indice >= 0 && indice < objetivos.length) {
+                    if (!objetivosEscolhidos[indice]) {
+                        objetivosEscolhidos[indice] = true;
+                        System.out.println();
+                        System.out.println("Objetivo escolhido: " + objetivos[indice]);
+                    } else {
+                        System.out.println("Esse objetivo já foi escolhido.");
+                    }
+                } else {
+                    System.out.println();
+                    System.out.println("Opção inválida.");
+                }
+            }
+        } while (objetivo != 0);
+
+        System.out.println("\nPerfil criado!");
+        System.out.println("Jogador: " + nome);
+        
+        System.out.println("\nObjetivos escolhidos: ");
+
+        for (int i = 0; i < objetivos.length; i++) {
+            if (objetivosEscolhidos[i]) {
+                System.out.println("- " + objetivos[i]);
+            }
         }
         
     /*  int nivel = 1;
