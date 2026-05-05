@@ -45,7 +45,8 @@ public class DailyQuest {
                 if (escolheuAlgumObjetivo) {
                     System.out.println("\nFinalizando escolhas de objetivos...");
                 } else { 
-                    System.out.println("\nVocê precisa escolher pelo menos um objetivo antes de continuar.");
+                    System.out.println("\n⚠️ Você ainda não escolheu nenhum objetivo.");
+                    System.out.println("Escolha pelo menos um para continuar sua jornada.");
                     objetivo = -1;
                 }
             } else {
@@ -70,10 +71,10 @@ public class DailyQuest {
             }
         } while (objetivo != 0);
 
-        System.out.println("\nPerfil criado!");
+        System.out.println("\n✅ Perfil criado com sucesso!");
         System.out.println("Jogador: " + nome);
         
-        System.out.println("\nObjetivos escolhidos: ");
+        System.out.println("\n🎯 Seus objetivos:");
 
         for (int i = 0; i < objetivos.length; i++) {
             if (objetivosEscolhidos[i]) {
