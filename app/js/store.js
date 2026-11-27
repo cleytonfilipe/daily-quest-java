@@ -112,7 +112,7 @@ export function replaceState(s) {
 
 export function resetState() {
   state = newState();
-  localStorage.removeItem(KEY);
+  try { localStorage.removeItem(KEY); } catch { /* armazenamento indisponível */ }
 }
 
 // Valida o conteúdo de um backup importado.

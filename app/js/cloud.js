@@ -15,6 +15,13 @@ const META_KEY = 'dailyquest:cloud-meta';
 const INVITE_KEY = 'dailyquest:invite';
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+// Acesso seguro ao armazenamento (pode estar bloqueado, por exemplo no modo privado).
+const ls = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* armazenamento indisponível */ } },
+  del: (k) => { try { localStorage.removeItem(k); } catch { /* armazenamento indisponível */ } },
+};
+
 export const cloud = { status: 'off', error: null, user: null, group: null, members: [], quests: [], feed: [], cloudSave: null };
 
 let fb = null; // { A, F, auth, db }
@@ -27,15 +34,15 @@ const report = (e) => console.warn('[nuvem]', e?.code || '', e?.message || e);
 // ---------- configuração ----------
 export function getConfig() {
   try {
-    const s = localStorage.getItem(CFG_KEY);
+    const s = ls.get(CFG_KEY);
     if (s) return JSON.parse(s);
   } catch { /* configuração inválida */ }
   return FIREBASE_CONFIG || null;
 }
 export const isConfigured = () => !!getConfig();
-export const configIsLocal = () => !!localStorage.getItem(CFG_KEY);
-export const saveConfig = (cfg) => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
-export const removeConfig = () => localStorage.removeItem(CFG_KEY);
+export const configIsLocal = () => !!ls.get(CFG_KEY);
+export const saveConfig = (cfg) => ls.set(CFG_KEY, JSON.stringify(cfg));
+export const removeConfig = () => ls.del(CFG_KEY);
 
 // Aceita o trecho copiado do console do Firebase (objeto JavaScript) ou um JSON.
 export function parseConfig(text) {
@@ -75,8 +82,8 @@ export function applyPasted(text) {
   return 'config';
 }
 
-export const pendingInvite = () => localStorage.getItem(INVITE_KEY);
-export const setPendingInvite = (c) => (c ? localStorage.setItem(INVITE_KEY, c) : localStorage.removeItem(INVITE_KEY));
+export const pendingInvite = () => ls.get(INVITE_KEY);
+export const setPendingInvite = (c) => (c ? ls.set(INVITE_KEY, c) : ls.del(INVITE_KEY));
 export const normalizeCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 export function inviteLink() {
@@ -196,8 +203,8 @@ export async function signOutCloud() {
 }
 
 // ---------- backup automático ----------
-const meta = () => { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; } };
-const setMeta = (m) => localStorage.setItem(META_KEY, JSON.stringify({ ...meta(), ...m }));
+const meta = () => { try { return JSON.parse(ls.get(META_KEY) || '{}'); } catch { return {}; } };
+const setMeta = (m) => ls.set(META_KEY, JSON.stringify({ ...meta(), ...m }));
 export const lastBackupAt = () => meta().lastBackup || null;
 
 async function pack(json) {
