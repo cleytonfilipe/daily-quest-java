@@ -1,23 +1,27 @@
-// Tela "Hoje": painel do herói, chefe da semana, missões do dia e atalhos.
-import { state, save, dayLog } from '../store.js';
+// Tela "Hoje": painel do herói, chefe da semana, agenda do dia e atalhos.
+import { state, save } from '../store.js';
 import { BOSSES, SECTORS, TIPS, CLASSES } from '../data.js';
 import { heroSVG, bossSVG, icon } from '../sprites.js';
-import { actions, esc, bar, emptyState, openModal, modalHead, num } from '../ui.js';
-import { todayQuests, questIsDone, xpToNext } from '../game.js';
-import { todayKey, fmtLong, weekKey, addDays, diffDays } from '../dates.js';
+import { actions, esc, bar, emptyState, openModal, modalHead, num, closeModal } from '../ui.js';
+import { xpToNext, toMin, nowMin } from '../game.js';
+import { todayKey, fmtLong, weekKey, diffDays, pad } from '../dates.js';
+import { agendaItems } from '../agenda.js';
 import { questRow, habitRow } from './quests.js';
+import { postRow } from './content.js';
+import { sharedRow, partyStrip, groupBossCard } from './group.js';
 import { pomodoroWidget } from './sectors.js';
+import { inGroup } from '../cloud.js';
 import { go, rerender } from '../nav.js';
 
-export function heroCard(compact = false) {
+export function heroCard() {
   const p = state.player;
   return `<section class="hero-card panel">
-    <div class="hero-sprite" data-act="go" data-tab="heroi">${heroSVG(p.look, p.cls, compact ? 64 : 80, 'bob')}<span class="lvl">Nv ${p.level}</span></div>
+    <div class="hero-sprite" data-act="go" data-tab="heroi">${heroSVG(p.look, p.cls, 80, 'bob')}<span class="lvl">Nv ${p.level}</span></div>
     <div class="hero-stats">
       <div class="hero-name"><b>${esc(p.name)}</b><small>${CLASSES[p.cls]?.name || ''}</small></div>
       <div class="stat-line">${icon('heart', 12)}${bar(p.hp, p.maxHp, 'hp')}</div>
       <div class="stat-line">${icon('star', 12)}${bar(p.xp, xpToNext(p.level), 'xp')}</div>
-      <div class="hero-money"><span class="c-gold">${icon('coin', 12)} ${num(p.gold)}</span>
+      <div class="hero-money"><button class="gold-link" data-act="go" data-tab="heroi" data-sub="loja">${icon('coin', 12)} ${num(p.gold)}</button>
         <span class="streak">${icon('fire', 12)} ${state.stats.dayStreak} ${state.stats.dayStreak === 1 ? 'dia' : 'dias'}</span>
         ${state.settings.resting ? '<span class="resting">Descansando</span>' : ''}</div>
     </div>
@@ -25,6 +29,7 @@ export function heroCard(compact = false) {
 }
 
 function bossCard() {
+  if (inGroup()) return groupBossCard();
   const b = state.boss;
   if (!b) return '';
   const def = BOSSES[b.idx];
@@ -47,15 +52,43 @@ function reportBanner() {
     <span><b>Relatório da noite</b><small>${r.missed.length} missões não feitas · <span class="c-hp">-${r.dmg} HP</span></small></span><span class="chev">›</span></button>`;
 }
 
+function itemRow(it, key) {
+  if (it.kind === 'post') return postRow(it.ref);
+  if (it.kind === 'shared') return sharedRow(it.ref, key);
+  return questRow(it.ref, key);
+}
+
+// Agenda: itens com horário em ordem, com a linha do "agora" no meio.
+function agendaList(items, key) {
+  const now = nowMin();
+  let out = '';
+  let placed = false;
+  for (const it of items) {
+    if (!placed && toMin(it.time) > now) {
+      out += nowLine();
+      placed = true;
+    }
+    out += itemRow(it, key);
+  }
+  if (!placed) out += nowLine();
+  return out;
+}
+function nowLine() {
+  const d = new Date();
+  return `<div class="now-line"><span>agora · ${pad(d.getHours())}:${pad(d.getMinutes())}</span></div>`;
+}
+
 export function renderToday() {
   const key = todayKey();
-  const quests = todayQuests(key);
-  quests.sort((a, b) => Number(questIsDone(a, key)) - Number(questIsDone(b, key)));
-  const doneCount = quests.filter((q) => questIsDone(q, key)).length;
+  const items = agendaItems(key);
+  const timed = items.filter((i) => i.time);
+  const untimed = items.filter((i) => !i.time);
+  const doneCount = items.filter((i) => i.done).length;
   const habits = state.quests.filter((q) => q.type === 'habit' && !q.archived);
   const d = state.log[key] || {};
   const tip = TIPS[(new Date().getDate()) % TIPS.length];
   const s = state.settings;
+  const next = timed.find((i) => !i.done && toMin(i.time) >= nowMin());
   const widgets = [];
   if (s.sectors.includes('alimentacao')) {
     widgets.push(`<div class="mini panel-inner">
@@ -69,15 +102,22 @@ export function renderToday() {
 
   return `<header class="screen-head"><h1>${icon('sun', 20)} Hoje</h1><small>${fmtLong(key)}</small></header>
     ${heroCard()}
+    ${partyStrip()}
     ${reportBanner()}
     ${bossCard()}
-    <h3 class="sec-title">Missões do dia <small>${doneCount}/${quests.length}</small></h3>
-    ${quests.length ? `${bar(doneCount, quests.length, 'progress', false)}<div class="list">${quests.map((q) => questRow(q, key)).join('')}</div>` : emptyState('Nenhuma missão para hoje. Que tal criar uma?')}
-    <button class="btn btn-wide" data-act="q-new">+ Nova missão</button>
+    ${next ? `<div class="next-up">${icon('bell', 14)} Próximo: <b>${esc(next.time)}</b> ${esc(next.title)} <small>${toMin(next.time) - nowMin() <= 0 ? 'agora' : `em ${fmtIn(toMin(next.time) - nowMin())}`}</small></div>` : ''}
+    <h3 class="sec-title">Agenda do dia <small>${doneCount}/${items.length}</small></h3>
+    ${items.length ? bar(doneCount, items.length, 'progress', false) : ''}
+    ${timed.length ? `<div class="list agenda">${agendaList(timed, key)}</div>` : ''}
+    ${untimed.length ? `${timed.length ? '<h4 class="sub-title">Sem horário</h4>' : ''}<div class="list">${untimed.map((it) => itemRow(it, key)).join('')}</div>` : ''}
+    ${!items.length ? emptyState('Nada agendado para hoje. Que tal criar uma missão ou escolher na Biblioteca?') : ''}
+    <div class="two-btns"><button class="btn" data-act="q-new">+ Nova missão</button><button class="btn" data-act="lib-open">${icon('book', 14)} Biblioteca</button></div>
     ${habits.length ? `<h3 class="sec-title">Hábitos</h3><div class="list">${habits.map((q) => habitRow(q, key)).join('')}</div>` : ''}
     ${widgets.length ? `<h3 class="sec-title">Atalhos</h3><div class="minis">${widgets.join('')}</div>` : ''}
     <p class="tip">${icon('scroll', 12)} ${esc(tip)}</p>`;
 }
+
+const fmtIn = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${m % 60 ? pad(m % 60) : ''}`);
 
 actions['report-open'] = () => {
   const r = state.pendingReport;
@@ -91,9 +131,12 @@ actions['report-open'] = () => {
 actions['report-ok'] = () => {
   state.pendingReport = null;
   save();
-  document.getElementById('modal-root').innerHTML = '';
-  document.body.classList.remove('modal-open');
+  closeModal();
   rerender();
 };
-actions.go = (el) => go(el.dataset.tab, el.dataset.sector ? { sector: el.dataset.sector } : {});
-
+actions.go = (el) => {
+  const params = {};
+  if (el.dataset.sector) params.sector = el.dataset.sector;
+  if (el.dataset.sub) params.sub = el.dataset.sub;
+  go(el.dataset.tab, params);
+};

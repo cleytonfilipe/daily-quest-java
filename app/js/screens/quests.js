@@ -1,11 +1,11 @@
 // Missões, hábitos e objetivos: listas, formulários e ações.
 import { state, save, dayLog } from '../store.js';
-import { SECTORS, DIFFICULTY, QUEST_TYPES } from '../data.js';
+import { SECTORS, SECTOR_IDS, DIFFICULTY, QUEST_TYPES, REMIND_OPTIONS } from '../data.js';
 import { icon } from '../sprites.js';
-import { actions, forms, esc, bar, sectorTag, emptyState, openModal, closeModal, modalHead, confirmBox, toast, num } from '../ui.js';
+import { actions, forms, esc, bar, sectorTag, emptyState, openModal, closeModal, modalHead, confirmBox, toast, num, timeChip } from '../ui.js';
 import {
   questIsDone, completeQuest, uncompleteQuest, habitPlus, habitMinus, newQuest, newGoal, completeGoal, reopenGoal,
-  isDoneOn,
+  isDoneOn, normRemind,
 } from '../game.js';
 import { todayKey, fmtDate, diffDays, WEEKDAYS_1, weekKey } from '../dates.js';
 import { route, rerender, go } from '../nav.js';
@@ -31,7 +31,7 @@ export function questRow(q, key = todayKey()) {
   return `<div class="quest ${done ? 'done' : ''}">
     <button class="check" ${lockedDone ? 'disabled' : `data-act="q-toggle" data-id="${q.id}"`} aria-label="${done ? 'Desmarcar' : 'Concluir'}">${done ? '✓' : ''}</button>
     <div class="q-main" data-act="q-edit" data-id="${q.id}">
-      <div class="q-title">${esc(q.title)}</div><div class="q-meta">${meta.join('')}</div>
+      <div class="q-title">${timeChip(q.time, done, key)}${esc(q.title)}</div><div class="q-meta">${meta.join('')}</div>
     </div>
     <div class="q-reward">${done ? '' : `<b class="c-xp">+${diff.xp}</b><small>XP</small>`}</div>
   </div>`;
@@ -81,7 +81,8 @@ function renderQuestList() {
   const finished = list.filter((q) => q.type === 'once' && q.completedAt && !q.archived);
   const archived = list.filter((q) => q.archived);
   return `${sectorFilter(f, 'q-filter')}
-    <button class="btn btn-green btn-wide" data-act="q-new" data-sector="${f}">+ Nova missão</button>
+    <div class="two-btns"><button class="btn btn-green" data-act="q-new" data-sector="${f}">+ Nova missão</button>
+    <button class="btn" data-act="lib-open" data-sector="${f}">${icon('book', 14)} Biblioteca</button></div>
     ${groups.map(([label, qs]) => qs.length ? `<h3 class="sec-title">${label} <small>${qs.length}</small></h3>
       <div class="list">${qs.map((q) => questListRow(q)).join('')}</div>` : '').join('')}
     ${!active.length ? emptyState('Nenhuma missão por aqui. Crie a primeira!') : ''}
@@ -93,6 +94,7 @@ function questListRow(q) {
   const diff = DIFFICULTY[q.diff] || DIFFICULTY.medio;
   let when = '';
   if (q.type === 'daily') when = q.days?.length && q.days.length < 7 ? q.days.map((d) => WEEKDAYS_1[d]).join(' ') : 'Todo dia';
+  if (q.time) when += ` às ${q.time}`;
   if (q.type === 'weekly') when = '1x por semana';
   if (q.type === 'once') when = q.completedAt ? `Concluída em ${fmtDate(q.completedAt)}` : q.due ? `Prazo ${fmtDate(q.due)}` : 'Sem prazo';
   return `<div class="row-item" data-act="q-edit" data-id="${q.id}">
@@ -106,7 +108,8 @@ function renderHabitList() {
   const list = state.quests.filter((q) => q.type === 'habit' && !q.archived && (!f || q.sector === f));
   return `${sectorFilter(f, 'q-filter')}
     <p class="muted small">Hábitos podem ser registrados várias vezes por dia. <b class="c-green">+</b> dá XP e ouro; <b class="c-hp">−</b> tira HP.</p>
-    <button class="btn btn-green btn-wide" data-act="q-new" data-type="habit" data-sector="${f}">+ Novo hábito</button>
+    <div class="two-btns"><button class="btn btn-green" data-act="q-new" data-type="habit" data-sector="${f}">+ Novo hábito</button>
+    <button class="btn" data-act="lib-open" data-sector="${f}">${icon('book', 14)} Biblioteca</button></div>
     <div class="list">${list.map((q) => habitRow(q)).join('')}</div>
     ${!list.length ? emptyState('Nenhum hábito ainda. Ex.: "Beber um copo d\'água" (+) ou "Fumar" (−).') : ''}`;
 }
@@ -162,14 +165,15 @@ actions['h-minus'] = (el) => { const q = findQuest(el.dataset.id); if (q) { habi
 actions['q-filter'] = (el) => { route.params.sector = el.dataset.id; rerender(); };
 actions['go-sub'] = (el) => go(el.dataset.tab, { ...route.params, sub: el.dataset.sub });
 
-function questForm(q) {
+function questForm(q, opts = {}) {
   const isNew = !q.id;
+  const remindVal = q.remind === null || q.remind === undefined ? (isNew && q.time ? '0' : '') : String(q.remind);
   const sectors = enabledSectors().includes(q.sector) ? enabledSectors() : [...enabledSectors(), q.sector];
   const openGoals = state.goals.filter((g) => !g.done || g.id === q.goalId);
   return `${modalHead(isNew ? (q.type === 'habit' ? 'Novo hábito' : 'Nova missão') : 'Editar', 'scroll')}
   <form class="qform" data-form="q-save" data-type="${q.type}">
-    <input type="hidden" name="id" value="${q.id || ''}">
-    <label class="field"><span>Título</span><input name="title" required maxlength="80" value="${esc(q.title || '')}" placeholder="Ex.: Treinar perna" autofocus></label>
+    <input type="hidden" name="id" value="${q.id || ''}"><input type="hidden" name="back" value="${opts.back || ''}">
+    <label class="field"><span>Título</span><input name="title" required maxlength="80" value="${esc(q.title || '')}" placeholder="Ex.: Postar o Reels do cliente" autofocus></label>
     <div class="field"><span>Tipo</span><div class="seg seg-sm">${Object.entries(QUEST_TYPES).map(([id, l]) => `
       <label><input type="radio" name="type" value="${id}" ${q.type === id ? 'checked' : ''} data-change="q-type"><span>${l}</span></label>`).join('')}</div></div>
     <div class="two">
@@ -179,6 +183,10 @@ function questForm(q) {
     <div class="field f-days"><span>Dias da semana</span><div class="days">${WEEKDAYS_1.map((l, i) => `
       <label><input type="checkbox" name="days" value="${i}" ${!q.days?.length || q.days.includes(i) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
       <small class="muted">Se não fizer em um dia marcado, perde HP à meia-noite.</small></div>
+    <div class="two f-time">
+      <label class="field"><span>Horário (opcional)</span><input type="time" name="time" value="${q.time || ''}"></label>
+      <label class="field"><span>Lembrete</span><select name="remind">${REMIND_OPTIONS.map((o) => `<option value="${o.v}" ${remindVal === o.v ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>
+    </div>
     <label class="field f-due"><span>Prazo (opcional)</span><input type="date" name="due" value="${q.due || ''}"></label>
     <div class="field f-habit"><span>Este hábito é</span><div class="days wide">
       <label><input type="checkbox" name="positive" ${q.positive ? 'checked' : ''}><span>+ Bom</span></label>
@@ -193,9 +201,13 @@ function questForm(q) {
   </form>`;
 }
 
+export function openQuestForm(prefill, opts = {}) {
+  openModal(questForm({ type: 'daily', diff: 'medio', days: [], positive: true, negative: false, goalId: null, ...prefill }, opts));
+}
+
 actions['q-new'] = (el) => {
   const sector = el.dataset.sector || enabledSectors()[0];
-  openModal(questForm({ type: el.dataset.type || 'daily', sector, diff: 'medio', days: [], positive: true, negative: false, goalId: el.dataset.goal || null }));
+  openQuestForm({ type: el.dataset.type || 'daily', sector, goalId: el.dataset.goal || null });
 };
 actions['q-edit'] = (el) => { const q = findQuest(el.dataset.id); if (q) openModal(questForm(q)); };
 actions['q-type'] = (el) => { el.closest('form').dataset.type = el.value; };
@@ -229,7 +241,9 @@ forms['q-save'] = (fd) => {
     negative: fd.has('negative'),
     goalId: fd.get('goalId') || null,
     notes: String(fd.get('notes') || '').trim(),
+    time: fd.get('type') === 'habit' ? null : fd.get('time') || null,
   };
+  data.remind = data.time ? normRemind(fd.get('remind'), data.time) : null;
   if (!data.title) return;
   if (data.type === 'daily' && !data.days.length) { toast('Escolha pelo menos um dia.', 'bad'); return; }
   if (data.type === 'daily' && data.days.length === 7) data.days = [];
@@ -242,8 +256,13 @@ forms['q-save'] = (fd) => {
     state.quests.push(newQuest(data));
     toast(data.type === 'habit' ? 'Hábito criado!' : 'Nova missão no diário!');
   }
+  if (!state.settings.sectors.includes(data.sector)) {
+    state.settings.sectors = SECTOR_IDS.filter((id) => id === data.sector || state.settings.sectors.includes(id));
+    toast(`Setor ${SECTORS[data.sector].name} ativado!`);
+  }
   save();
-  closeModal();
+  if (fd.get('back') === 'library' && actions['lib-reopen']) actions['lib-reopen']();
+  else closeModal();
   rerender();
 };
 

@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Regras de segurança do Daily Quest.
+// - Cada pessoa só lê e escreve os próprios dados (backup do jogo).
+// - Um grupo só pode ser lido e alterado por quem é membro.
+// - Para entrar num grupo, a pessoa só pode adicionar a si mesma (com o código de convite).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isMember(gid) {
+      return signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(gid)).data.memberIds;
+    }
+
+    match /users/{uid}/{document=**} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn() && isMember(request.resource.data.groupId);
+      allow delete: if signedIn() && isMember(resource.data.groupId);
+    }
+
+    match /groups/{gid} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+      allow create: if signedIn() && request.resource.data.memberIds == [request.auth.uid];
+      allow update: if signedIn() && (
+        // Membro: altera o grupo, mas na lista de membros só pode remover a si mesmo.
+        (request.auth.uid in resource.data.memberIds && (
+          request.resource.data.memberIds == resource.data.memberIds
+          || request.resource.data.memberIds == resource.data.memberIds.removeAll([request.auth.uid])
+        ))
+        // Quem não é membro: só pode se adicionar (entrar com o código), até 8 pessoas.
+        || (!(request.auth.uid in resource.data.memberIds)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+          && request.resource.data.memberIds == resource.data.memberIds.concat([request.auth.uid])
+          && resource.data.memberIds.size() < 8)
+      );
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(gid);
+        allow write: if isMember(gid) && request.auth.uid == uid;
+      }
+      match /quests/{qid} {
+        allow read, write: if isMember(gid);
+      }
+      match /feed/{eid} {
+        allow read, write: if isMember(gid);
+      }
+    }
+  }
+}

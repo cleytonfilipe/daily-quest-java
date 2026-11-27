@@ -1,7 +1,7 @@
 # Daily Quest
 
-Sua rotina diária como um **RPG pixelado**. Complete missões, ganhe XP e ouro, evolua atributos,
-derrote o chefe da semana e troque o ouro por recompensas reais.
+Sua rotina diária como um **RPG pixelado**. Complete missões no horário, ganhe XP e ouro, evolua
+atributos, derrote o chefe da semana (sozinho ou em dupla) e troque o ouro por recompensas reais.
 
 O app é um **PWA** (Progressive Web App): roda no Safari do iPhone e pode ser instalado na Tela de
 Início como um app de verdade, em tela cheia e funcionando offline. Não precisa de Mac, Xcode nem
@@ -11,15 +11,21 @@ conta paga de desenvolvedor Apple.
 
 ## Funcionalidades
 
-**Cadastro do herói** (em 6 etapas): nome, classe, visual (pele, cabelo, roupa), setores da rotina,
-objetivos e metas iniciais (água, peso, orçamento, sono).
+**Cadastro do herói** (7 etapas): nome, classe, visual, **rotina** (profissão e horários de acordar e
+dormir), setores, objetivos e metas iniciais (água, peso, orçamento, sono).
+
+**Agenda do dia**: a tela Hoje mostra as tarefas com horário em ordem, com a linha do "agora", as
+atrasadas em laranja e o próximo compromisso. Tarefas feitas **no horário** (até 30 min depois) dão
+**+20% de XP**. Concluir tudo do dia é um **Dia Perfeito** (+30 XP).
+
+**Lembretes**: cada tarefa com horário pode avisar na hora ou 5, 15, 30 ou 60 min antes.
 
 **Classes**
 
 | Classe | Bônus |
 |---|---|
-| Guerreiro | +10% XP em Academia |
-| Mago | +10% XP em Trabalho e Estudos |
+| Guerreiro | +10% XP em Academia e Casa |
+| Mago | +10% XP em Trabalho, Estudos e Conteúdo |
 | Druida | +10% XP em Alimentação, Sono e Mente |
 | Mercador | +10% de ouro em tudo e +10% XP em Financeiro |
 
@@ -27,54 +33,69 @@ objetivos e metas iniciais (água, peso, orçamento, sono).
 
 | Setor | Atributo | Módulo |
 |---|---|---|
-| Alimentação | VIT Vitalidade | Contador de água, refeições saudáveis, registro de peso |
-| Academia | FOR Força | Registro de treinos (tipo, duração, intensidade), semana de treinos |
-| Trabalho | FOC Foco | 3 prioridades do dia, timer Pomodoro |
+| Alimentação | VIT Vitalidade | Água, refeições saudáveis, peso |
+| Academia | FOR Força | Registro de treinos, semana de treinos |
+| Trabalho | FOC Foco | 3 prioridades do dia, Pomodoro |
 | Financeiro | RIQ Riqueza | Receitas e gastos, saldo do mês, orçamento, gastos por categoria |
+| **Conteúdo** *(extra)* | CRI Criatividade | Calendário de posts para social media (abaixo) |
+| **Casa** *(extra)* | ORG Organização | Tarefas da casa, divididas com o grupo |
 | Sono *(extra)* | ENE Energia | Horário de dormir/acordar, gráfico de 7 dias |
 | Estudos *(extra)* | SAB Sabedoria | Pomodoro de estudos |
 | Mente *(extra)* | ESP Espírito | Humor do dia, diário de bordo |
-| Social *(extra)* | CAR Carisma | Ideias de missões sociais |
+| Social *(extra)* | CAR Carisma | Ideias de missões, inclusive para o casal |
 
-**Missões**
-- **Diárias** (com dias da semana), **semanais**, **únicas** (com prazo) e **hábitos** (+ bom / − ruim).
-- 4 dificuldades: Fácil, Médio, Difícil e Épico, com XP, ouro e pontos de atributo diferentes.
-- **Sequências**: cada dia seguido aumenta o XP e o ouro (até +50%).
-- **Relatório da noite**: diárias não feitas tiram HP à meia-noite (no máximo metade do HP por noite).
-  Com o **Modo descanso** ligado, nada tira HP.
-- Se o HP zerar, o herói desmaia: perde 25% do ouro e o XP do nível atual.
+**Conteúdo (social media)**: cada post tem cliente/perfil, plataforma (Instagram, TikTok, YouTube,
+LinkedIn...), formato (Reels, Carrossel, Stories, Live...), data, horário, lembrete, legenda/roteiro
+(com botão "Copiar legenda") e status **Ideia › Produzindo › Pronto › Publicado**. Mostra atrasados,
+hoje, próximos 14 dias, banco de ideias e o placar da semana. Os posts do dia entram na agenda, então
+"postar isso a tal hora" vira uma missão com XP.
 
-**Objetivos**: metas de longo prazo, do tipo marco (sim/não) ou numéricas (ex.: juntar R$ 5.000,
-perder 5 kg), com prazo, barra de progresso e missões ligadas. Concluir dá 150 XP e 75 de ouro.
+**Biblioteca de hábitos**: sugestões prontas por setor (social media, casa, casal, sono, finanças...)
+com horário sugerido. Toque, ajuste e adicione.
 
-**Chefe semanal**: toda segunda-feira surge um chefe (Dragão da Procrastinação, Golem do Sedentarismo,
-Slime do Açúcar...). Cada missão concluída causa dano igual ao XP ganho. Derrotá-lo dá bônus.
+**Missões**: diárias (com dias e horário), semanais, únicas (com prazo) e hábitos (+ bom / − ruim);
+4 dificuldades; sequências até +50%; diárias não feitas tiram HP à meia-noite (no máximo metade do HP
+por noite, e nada no Modo descanso).
 
-**Loja**: poções de vida e recompensas reais personalizadas (episódio de série, delivery, dia de folga...).
+**Objetivos**: metas de longo prazo, marco ou numéricas (ex.: juntar R$ 5.000), com prazo e missões ligadas.
 
-**Herói**: perfil, atributos, estatísticas, 22 conquistas, histórico de XP (30 dias), mapa de calor
-de missões (12 semanas) e configurações (sons 8-bit, metas, setores, backup).
+**Grupo (jogar em dupla)**, com a nuvem opcional:
+- perfis ao vivo da dupla (nível, HP, XP, progresso do dia, sequência, online);
+- **missões da casa** compartilhadas: quem fizer primeiro ganha o XP; dá para definir quem faz;
+- **chefe do grupo**: as missões dos dois causam dano no mesmo chefe, com placar de quem bateu mais;
+- **incentivos** ("Tenho muito orgulho de você!") e **cura** (gaste ouro para recuperar o HP da dupla);
+- **mural** com conquistas, níveis, dias perfeitos e tarefas da casa;
+- privacidade: só o resumo do herói vai para o grupo (finanças, peso e diário ficam no aparelho).
+
+**Conta e backup na nuvem**: com a conta, o progresso é salvo sozinho e volta em outro aparelho
+("Já tenho conta"). Sem conta, há exportar/importar backup em arquivo.
+
+**Herói**: perfil, atributos, estatísticas, **loja**, 31 conquistas, histórico (XP de 30 dias e mapa
+de calor de 12 semanas) e configurações.
+
+## Ativar a nuvem (grupo e backup)
+
+Veja o passo a passo em **[docs/NUVEM.md](docs/NUVEM.md)**: criar um projeto gratuito no Firebase,
+ativar o login por e-mail e o Firestore, publicar as regras de [`firestore.rules`](firestore.rules) e
+colar a configuração no app.
 
 ## Como usar no iPhone
 
 1. Publique o app (veja abaixo) e abra o link no **Safari**.
-2. Toque em **Compartilhar** (quadrado com seta para cima).
-3. Toque em **Adicionar à Tela de Início**.
-4. Abra pelo ícone do Daily Quest.
+2. Toque em **Compartilhar** (quadrado com seta para cima) › **Adicionar à Tela de Início**.
+3. Abra sempre pelo ícone do Daily Quest.
 
-Os dados ficam salvos **somente no aparelho**. Use *Herói > Config > Backup > Exportar* de vez em
-quando para guardar uma cópia (dá para salvar no app Arquivos/iCloud Drive).
+No iPhone, o app da Tela de Início guarda os dados separado do Safari.
 
 ### Publicar com GitHub Pages (gratuito)
 
 1. Faça merge desta branch na `main`.
-2. No GitHub: **Settings > Pages > Build and deployment > Source: GitHub Actions**.
+2. No GitHub: **Settings › Pages › Build and deployment › Source: GitHub Actions**.
 3. O workflow `.github/workflows/pages.yml` publica a pasta `app/` automaticamente.
 4. O endereço fica parecido com `https://<seu-usuario>.github.io/daily-quest-java/`.
 
-> GitHub Pages em repositório privado exige plano pago. Se o repositório for privado, deixe-o
-> público ou use outra hospedagem estática gratuita (Netlify, Vercel, Cloudflare Pages) apontando
-> para a pasta `app/`.
+> GitHub Pages em repositório privado exige plano pago. Alternativas grátis: deixar o repositório
+> público, ou usar o Firebase Hosting (veja docs/NUVEM.md).
 
 ## Rodar no computador
 
@@ -86,40 +107,36 @@ python3 -m http.server 8000
 # abra http://localhost:8000
 ```
 
-Para testar no iPhone na mesma rede Wi-Fi, abra `http://<ip-do-computador>:8000` no Safari.
-(O modo offline/instalação completo exige HTTPS, que o GitHub Pages já fornece.)
-
-Ao publicar mudanças, aumente a versão do cache em `app/sw.js` (`daily-quest-v1` → `v2`).
+Ao publicar mudanças, aumente a versão do cache em `app/sw.js` (`daily-quest-v2` → `v3`).
 
 ## Estrutura
 
 ```
 app/
-  index.html              página única do app
-  manifest.webmanifest    dados para instalar como app
-  sw.js                   service worker (offline)
-  css/style.css           visual RPG pixelado
-  fonts/                  Press Start 2P e VT323 (licença OFL)
-  icons/                  ícones do app
+  index.html, manifest.webmanifest, sw.js   página, instalação e modo offline
+  css/style.css                              visual RPG pixelado
+  fonts/, icons/                             fontes (licença OFL) e ícones
+  vendor/firebase/                           SDK do Firebase (só carregado se a nuvem estiver ativa)
   js/
-    app.js                inicialização, abas e eventos
-    data.js               setores, classes, objetivos sugeridos, conquistas, chefes
-    game.js               regras: XP, níveis, HP, sequências, chefe, conquistas, virada do dia
-    store.js              estado salvo no localStorage, backup
-    sprites.js            pixel art (herói, chefes, ícones) gerada em SVG
-    sfx.js                sons 8-bit com Web Audio
-    ui.js                 componentes: barras, modais, toasts
-    screens/              telas: cadastro, hoje, missões, setores, loja, herói
-tools/gen-icons.cjs       gera os ícones PNG a partir do sprite
+    app.js           inicialização, abas, eventos, lembretes
+    data.js          setores, classes, biblioteca de hábitos, plataformas, conquistas, chefes
+    game.js          regras: XP, níveis, HP, horários, posts, dia perfeito, chefe, conquistas
+    agenda.js        agenda do dia e lembretes
+    cloud.js         conta, backup, grupo, missões da casa, chefe do grupo, mural (Firebase)
+    cloud-config.js  configuração do Firebase (opcional)
+    store.js         estado salvo no aparelho (com migração de versões)
+    sprites.js       pixel art (herói, chefes, ícones) em SVG
+    sfx.js, ui.js, nav.js, dates.js
+    screens/         hoje, missões, setores, conteúdo, biblioteca, grupo, loja, herói, cadastro
+firestore.rules      regras de segurança da nuvem
+firebase.json        configuração do Firebase (emulador e hosting)
+docs/NUVEM.md        guia da nuvem
+tools/               gerar ícones e atualizar o SDK do Firebase
 ```
 
 ## Próximos passos sugeridos
 
-- **App nativo na App Store**: empacotar este mesmo código com [Capacitor](https://capacitorjs.com)
-  (precisa de um Mac com Xcode e conta Apple Developer) ou reescrever em SwiftUI.
-- **Notificações**: lembretes de água, treino e hora de dormir (no iOS, Web Push funciona em PWAs
-  instalados a partir do iOS 16.4, mas exige um pequeno servidor).
-- **Sincronização na nuvem e login**: um backend (pode ser em Java com Spring Boot, aproveitando o
-  início do projeto) para salvar o progresso e usar em vários aparelhos.
-- **Integração com o app Saúde** (passos, sono, treinos): só é possível em app nativo.
-- **Modo grupo**: amigos enfrentando o mesmo chefe semanal.
+- **Notificações com o app fechado**: exige um servidor de push (Firebase Cloud Functions no plano Blaze).
+- **App nativo na App Store**: empacotar este código com Capacitor (precisa de Mac + conta Apple Developer).
+- **Integração com o app Saúde** (passos, sono, treinos): só em app nativo.
+- **Backend em Java** (Spring Boot) no lugar do Firebase, aproveitando o início do projeto.

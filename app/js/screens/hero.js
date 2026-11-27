@@ -2,7 +2,10 @@
 import { state, save, exportBackup, parseBackup, replaceState, resetState } from '../store.js';
 import { ATTRS, SECTORS, CLASSES, ACHIEVEMENTS, BOSSES } from '../data.js';
 import { heroSVG, icon } from '../sprites.js';
-import { actions, forms, esc, bar, openModal, closeModal, modalHead, confirmBox, toast, num } from '../ui.js';
+import { actions, forms, esc, bar, openModal, closeModal, modalHead, confirmBox, toast, num, relTime } from '../ui.js';
+import { renderShop } from './shop.js';
+import { notifyPermission, requestNotify } from '../agenda.js';
+import { cloud, isConfigured, configIsLocal, lastBackupAt, backupNow, restoreNow, friendly } from '../cloud.js';
 import { attrInfo, xpToNext, processDays } from '../game.js';
 import { todayKey, addDays, fmtDate, weekday, WEEKDAYS_1, diffDays } from '../dates.js';
 import { lookPicker } from './onboarding.js';
@@ -11,10 +14,10 @@ import { setSound, play } from '../sfx.js';
 
 export function renderHero() {
   const sub = route.params.sub || 'perfil';
-  const tabs = [['perfil', 'Perfil'], ['conquistas', 'Conquistas'], ['historico', 'Histórico'], ['config', 'Config']];
-  const body = { perfil: profile, conquistas: achievements, historico: history, config: settings }[sub]();
+  const tabs = [['perfil', 'Perfil'], ['loja', 'Loja'], ['conquistas', 'Troféus'], ['historico', 'Histórico'], ['config', 'Config']];
+  const body = ({ perfil: profile, loja: renderShop, conquistas: achievements, historico: history, config: settings }[sub] || profile)();
   return `<header class="screen-head"><h1>${icon('hero', 20)} Herói</h1></header>
-    <div class="seg">${tabs.map(([id, l]) => `<button class="${sub === id ? 'sel' : ''}" data-act="go-sub" data-tab="heroi" data-sub="${id}">${l}</button>`).join('')}</div>
+    <div class="seg seg-5">${tabs.map(([id, l]) => `<button class="${sub === id ? 'sel' : ''}" data-act="go-sub" data-tab="heroi" data-sub="${id}">${l}</button>`).join('')}</div>
     ${body}`;
 }
 
@@ -108,6 +111,11 @@ function settings() {
       ${sw('sound', 'Efeitos sonoros', 'Sons 8-bit ao completar missões')}
       ${sw('resting', 'Modo descanso', 'Pausa o dano por missões não feitas (férias, doença)')}
     </section>
+    <section class="panel"><h3 class="sec-title">Lembretes</h3>
+      ${sw('notify', 'Notificações do sistema', notifyText())}
+      <p class="small muted">Os lembretes das tarefas com horário aparecem com o app aberto ou recém-minimizado. Com o app totalmente fechado, o iPhone não deixa sites agendarem alertas sozinhos: para compromissos críticos, use também o app Lembretes.</p>
+    </section>
+    ${cloudSection()}
     <section class="panel"><h3 class="sec-title">Metas</h3>
       <form data-form="settings-save">
         <div class="two">
@@ -142,6 +150,48 @@ function settings() {
     </section>
     <p class="center small muted">Daily Quest · feito com pixels e disciplina</p>`;
 }
+
+function notifyText() {
+  const perm = notifyPermission();
+  if (perm === 'unsupported') return 'No iPhone, instale o app na Tela de Início (iOS 16.4+) para permitir notificações';
+  if (perm === 'denied') return 'Bloqueadas: libere em Ajustes › Notificações › Daily Quest';
+  if (perm === 'granted') return 'Permitidas neste aparelho';
+  return 'Toque para permitir alertas no horário das tarefas';
+}
+
+function cloudSection() {
+  const head = '<h3 class="sec-title">Conta e nuvem</h3>';
+  if (!isConfigured()) {
+    return `<section class="panel">${head}<p class="small muted">Desativada. Configure na aba Grupo para ter backup automático e jogar com sua dupla.</p>
+      <button class="btn btn-wide" data-act="go" data-tab="grupo">Ir para o Grupo</button></section>`;
+  }
+  if (!cloud.user) {
+    return `<section class="panel">${head}<p class="small muted">${cloud.status === 'error' ? esc(cloud.error || 'Erro de conexão') : 'Você ainda não entrou na sua conta.'}</p>
+      <button class="btn btn-wide" data-act="go" data-tab="grupo">Entrar ou criar conta</button></section>`;
+  }
+  const last = lastBackupAt();
+  return `<section class="panel">${head}
+      <p class="small">Conectado como <b>${esc(cloud.user.email)}</b></p>
+      <p class="small muted">Backup automático ligado${last ? ` · último ${esc(relTime(last))}` : ''}</p>
+      <div class="row-btns">
+        <button class="btn btn-sm" data-act="cloud-backup">Backup agora</button>
+        <button class="btn btn-sm" data-act="cloud-restore">Restaurar</button>
+        <button class="btn btn-sm" data-act="cloud-signout">Sair da conta</button>
+      </div>
+      ${configIsLocal() ? '<button class="btn btn-sm" data-act="cloud-config-remove">Remover configuração do Firebase</button>' : ''}
+    </section>`;
+}
+
+actions['cloud-backup'] = async (el) => {
+  el.disabled = true;
+  try { await backupNow(); toast('Backup salvo na nuvem!'); } catch (e) { toast(esc(friendly(e)), 'bad', 4000); }
+  rerender();
+};
+actions['cloud-restore'] = () => {
+  confirmBox('Substituir o progresso deste aparelho pelo último backup da nuvem?', async () => {
+    try { await restoreNow(); toast('Progresso restaurado!'); go('hoje'); } catch (e) { toast(esc(friendly(e)), 'bad', 4000); }
+  }, 'Restaurar');
+};
 
 // ---------- ações ----------
 let editLook = null;
@@ -180,7 +230,15 @@ forms['hero-save'] = (fd) => {
   rerender();
 };
 
-actions['setting-toggle'] = (el) => {
+actions['setting-toggle'] = async (el) => {
+  if (el.dataset.key === 'notify' && el.checked) {
+    const perm = await requestNotify();
+    if (perm !== 'granted') {
+      el.checked = false;
+      toast(perm === 'unsupported' ? 'Instale o app na Tela de Início para ativar notificações.' : 'Permissão de notificação negada.', 'bad', 4000);
+      return;
+    }
+  }
   state.settings[el.dataset.key] = el.checked;
   if (el.dataset.key === 'sound') { setSound(el.checked); if (el.checked) play('coin'); }
   if (el.dataset.key === 'resting') toast(el.checked ? 'Modo descanso ativado. Recupere-se, herói!' : 'De volta à aventura!');

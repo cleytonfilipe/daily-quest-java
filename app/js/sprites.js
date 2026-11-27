@@ -136,6 +136,11 @@ const ICONS = {
   skull: [['.wwwwww.', 'wwwwwwww', 'wkkwwkkw', 'wkkwwkkw', 'wwwkkwww', '.wwwwww.', '.w.ww.w.', '........'], { w: '#f4f4f4', k: '#14101e' }],
   water: [['...b....', '...b....', '..bbb...', '.bbbbb..', '.bwbbb..', 'bwbbbbb.', '.bbbbb..', '..bbb...'], { b: '#41a6f6', w: '#c0e8ff' }],
   gear: [['...kk...', '.k.kk.k.', '..kkkk..', 'kkk..kkk', 'kkk..kkk', '..kkkk..', '.k.kk.k.', '...kk...'], { k: '#94b0c2' }],
+  phone: [['.pppppp.', '.pbbbbp.', '.pbwbbp.', '.pbwwbp.', '.pbwbbp.', '.pbbbbp.', '.pppppp.', '.pppwpp.'], { p: '#e060a0', b: '#29366f', w: '#ffffff' }],
+  house: [['...rr...', '..rrrr..', '.rrrrrr.', 'rrrrrrrr', '.wwwwww.', '.wbwwkw.', '.wwwwkw.', '.wwwwkw.'], { r: '#b13e53', w: '#f2d99a', b: '#41a6f6', k: '#7a4a2a' }],
+  clock: [['..oooo..', '.owwwwo.', 'owwkwwwo', 'owwkwwwo', 'owwkkkwo', 'owwwwwwo', '.owwwwo.', '..oooo..'], { o: '#41a6f6', w: '#f4f4f4', k: '#14101e' }],
+  bell: [['...yy...', '..yyyy..', '.yyyyyy.', '.yyyyyy.', '.yyyyyy.', 'yyyyyyyy', '........', '...yy...'], { y: '#ffcd75' }],
+  group: [['.ss..tt.', '.ss..tt.', '........', 'bbbbpppp', 'bbbbpppp', 'bbbbpppp', '.bb..pp.', '.bb..pp.'], { s: '#e8b48a', t: '#c68642', b: '#3b5dc9', p: '#e060a0' }],
   target: [['..rrrr..', '.rwwwwr.', 'rwrrrrwr', 'rwrwwrwr', 'rwrwwrwr', 'rwrrrrwr', '.rwwwwr.', '..rrrr..'], { r: '#e04050', w: '#f4f4f4' }],
 };
 

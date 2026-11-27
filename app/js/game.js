@@ -1,11 +1,30 @@
-// Regras do jogo: XP, níveis, atributos, HP, sequências, chefe semanal e conquistas.
-import { state, save, dayLog, uid } from './store.js';
-import { SECTORS, CLASSES, DIFFICULTY, ACHIEVEMENTS, BOSSES, BUILTIN_ITEMS, OBJECTIVE_PRESETS } from './data.js';
+// Regras do jogo: XP, níveis, atributos, HP, sequências, horários, chefe semanal e conquistas.
+import { state, save, dayLog, uid, ALL_ATTRS } from './store.js';
+import { SECTORS, CLASSES, DIFFICULTY, ACHIEVEMENTS, BOSSES, BUILTIN_ITEMS, OBJECTIVE_PRESETS, FORMATS } from './data.js';
 import { todayKey, addDays, weekday, weekKey } from './dates.js';
 
 // ---------- fila de eventos para a interface (toasts, level up, etc.) ----------
 export const events = [];
-const emit = (type, data = {}) => events.push({ type, ...data });
+// Ganchos chamados a cada evento (o grupo usa para publicar no mural).
+export const emitHooks = [];
+export function emit(type, data = {}) {
+  const ev = { type, ...data };
+  events.push(ev);
+  for (const h of emitHooks) {
+    try { h(ev); } catch (e) { console.error(e); }
+  }
+}
+
+// Quando há um grupo, o dano vai para o chefe do grupo (definido em cloud.js).
+let bossHook = null;
+export const setBossHook = (f) => { bossHook = f; };
+
+// ---------- horários ----------
+export const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + (m || 0); };
+export const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+export const ON_TIME_GRACE = 30;
+// "No horário": concluída até 30 minutos depois da hora marcada.
+export const isOnTime = (time) => !!time && nowMin() <= toMin(time) + ON_TIME_GRACE;
 
 // ---------- progressão ----------
 export const xpToNext = (level) => 100 + (level - 1) * 50;
@@ -21,7 +40,7 @@ export function createPlayer({ name, cls, look }) {
   return {
     name, cls, look,
     level: 1, xp: 0, hp: 50, maxHp: 50, gold: 0,
-    attrs: { for: 0, vit: 0, foc: 0, riq: 0, ene: 0, sab: 0, esp: 0, car: 0 },
+    attrs: Object.fromEntries(ALL_ATTRS.map((a) => [a, 0])),
   };
 }
 
@@ -46,6 +65,12 @@ function markActive() {
   st.lastActiveDay = t;
 }
 
+function addWeekDamage(n) {
+  const wk = weekKey(todayKey());
+  if (!state.stats.weekDamage || state.stats.weekDamage.week !== wk) state.stats.weekDamage = { week: wk, dmg: 0 };
+  state.stats.weekDamage.dmg = Math.max(0, state.stats.weekDamage.dmg + n);
+}
+
 // Concede XP/ouro/pontos de atributo. Retorna um "recibo" que permite desfazer.
 export function reward(sector, baseXp, baseGold, pts, opts = {}) {
   const p = state.player;
@@ -59,6 +84,10 @@ export function reward(sector, baseXp, baseGold, pts, opts = {}) {
     xp = Math.round(xp * mult);
     gold = Math.round(gold * mult);
   }
+  if (opts.onTime) {
+    xp = Math.round(xp * 1.2);
+    gold = Math.round(gold * 1.2);
+  }
   const attr = SECTORS[sector]?.attr || null;
   const date = todayKey();
   addXp(xp);
@@ -69,10 +98,11 @@ export function reward(sector, baseXp, baseGold, pts, opts = {}) {
   d.gold += gold;
   state.stats.totalXp += xp;
   state.stats.totalGold += gold;
-  const boss = opts.noBoss ? 0 : damageBoss(xp);
+  const b = opts.noBoss ? { dmg: 0, group: false } : damageBoss(xp);
+  addWeekDamage(b.dmg);
   markActive();
-  if (!opts.silent) emit('gain', { xp, gold, attr, pts, boss, label: opts.label });
-  return { xp, gold, pts, attr, boss, date };
+  if (!opts.silent) emit('gain', { xp, gold, attr, pts, boss: b.dmg, label: opts.label, onTime: !!opts.onTime });
+  return { xp, gold, pts, attr, boss: b.dmg, groupBoss: b.group, date, onTime: !!opts.onTime, label: opts.label || null, at: Date.now() };
 }
 
 export function revoke(r) {
@@ -93,7 +123,11 @@ export function revoke(r) {
   d.gold = Math.max(0, d.gold - r.gold);
   state.stats.totalXp = Math.max(0, state.stats.totalXp - r.xp);
   state.stats.totalGold = Math.max(0, state.stats.totalGold - r.gold);
-  if (r.boss && state.boss && !state.boss.defeated) state.boss.hp = Math.min(state.boss.maxHp, state.boss.hp + r.boss);
+  if (r.boss) {
+    if (r.groupBoss) bossHook?.(-r.boss);
+    else if (state.boss && !state.boss.defeated) state.boss.hp = Math.min(state.boss.maxHp, state.boss.hp + r.boss);
+    if (weekKey(r.date || todayKey()) === state.stats.weekDamage?.week) addWeekDamage(-r.boss);
+  }
 }
 
 // ---------- HP ----------
@@ -127,24 +161,33 @@ export function ensureBoss() {
   const maxHp = 200 + state.player.level * 30;
   state.boss = { week: wk, idx, maxHp, hp: maxHp, defeated: false };
   state.stats.bossesSeen++;
-  if (prev && !prev.defeated) emit('bossEscaped', { name: BOSSES[prev.idx].name });
+  if (prev && !prev.defeated && !state.cloud.groupId) emit('bossEscaped', { name: BOSSES[prev.idx].name });
+}
+
+export function grantBossReward(name) {
+  state.stats.bossesDefeated++;
+  const gold = 60 + state.player.level * 10;
+  const xp = 100;
+  reward(null, xp, gold, 0, { noBoss: true, silent: true });
+  emit('boss', { name, gold, xp });
+  checkAchievements();
 }
 
 function damageBoss(amount) {
+  if (bossHook) {
+    const r = bossHook(amount);
+    if (r !== null && r !== undefined) return { dmg: r, group: true };
+  }
   const b = state.boss;
-  if (!b || b.defeated) return 0;
+  if (!b || b.defeated) return { dmg: 0, group: false };
   const dmg = Math.min(amount, b.hp);
   b.hp -= dmg;
   if (b.hp <= 0) {
     b.defeated = true;
     b.defeatedAt = todayKey();
-    state.stats.bossesDefeated++;
-    const gold = 60 + state.player.level * 10;
-    const xp = 100;
-    reward(null, xp, gold, 0, { noBoss: true, silent: true });
-    emit('boss', { name: BOSSES[b.idx].name, gold, xp });
+    grantBossReward(BOSSES[b.idx].name);
   }
-  return dmg;
+  return { dmg, group: false };
 }
 
 // ---------- missões ----------
@@ -173,14 +216,23 @@ export function todayQuests(key = todayKey()) {
   });
 }
 
+const normRemind = (v, time) => {
+  if (v === '' || v === null) return null;
+  if (v === undefined) return time ? 0 : null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
 export function newQuest(data) {
   return {
     id: uid(), title: data.title, sector: data.sector, type: data.type || 'daily', diff: data.diff || 'medio',
     days: data.days || [], due: data.due || null, notes: data.notes || '', positive: data.positive ?? true,
     negative: data.negative ?? false, goalId: data.goalId || null, createdAt: todayKey(),
+    time: data.time || null, remind: normRemind(data.remind, data.time),
     streak: 0, best: 0, count: 0, lastDone: null, completedAt: null, archived: false,
   };
 }
+export { normRemind };
 
 export function completeQuest(q) {
   const key = todayKey();
@@ -195,13 +247,16 @@ export function completeQuest(q) {
     state.stats.bestStreak = Math.max(state.stats.bestStreak, q.streak);
     streak = q.streak;
   }
-  const r = reward(q.sector, diff.xp, diff.gold, diff.pts, { streak, label: q.title });
+  const onTime = q.type !== 'weekly' && isOnTime(q.time);
+  const r = reward(q.sector, diff.xp, diff.gold, diff.pts, { streak, label: q.title, onTime });
+  if (onTime) state.stats.onTime++;
   d.done[q.id] = { ...r, prev };
   q.lastDone = key;
   q.count = (q.count || 0) + 1;
   if (q.type === 'once') q.completedAt = key;
   state.stats.questsDone++;
   checkAchievements();
+  checkPerfectDay();
   save();
 }
 
@@ -216,6 +271,7 @@ export function uncompleteQuest(q) {
   q.lastDone = r.prev?.lastDone ?? null;
   q.count = Math.max(0, (q.count || 1) - 1);
   if (q.type === 'once') q.completedAt = null;
+  if (r.onTime) state.stats.onTime = Math.max(0, state.stats.onTime - 1);
   state.stats.questsDone = Math.max(0, state.stats.questsDone - 1);
   emit('undo');
   save();
@@ -250,6 +306,57 @@ export function dailyBonus(id, sector, xp, gold, pts, label) {
   return true;
 }
 
+// ---------- conteúdo (posts) ----------
+export function postsOn(key) {
+  return state.content.posts.filter((p) => p.date === key);
+}
+
+export function publishPost(p) {
+  if (p.status === 'postado') return;
+  const f = FORMATS[p.format] || FORMATS.post;
+  const onTime = p.date === todayKey() && isOnTime(p.time);
+  const r = reward('conteudo', f.xp, Math.round(f.xp / 2.5), Math.max(1, Math.round(f.xp / 10)), { label: p.title, onTime });
+  p.prevStatus = p.status;
+  p.status = 'postado';
+  p.postedAt = todayKey();
+  p.receipt = r;
+  state.stats.postsPublished++;
+  if (onTime) state.stats.onTime++;
+  checkAchievements();
+  checkPerfectDay();
+  save();
+}
+
+export function unpublishPost(p) {
+  if (p.status !== 'postado') return;
+  if (p.receipt) {
+    revoke(p.receipt);
+    if (p.receipt.onTime) state.stats.onTime = Math.max(0, state.stats.onTime - 1);
+  }
+  p.status = p.prevStatus && p.prevStatus !== 'postado' ? p.prevStatus : 'pronto';
+  p.postedAt = null;
+  p.receipt = null;
+  state.stats.postsPublished = Math.max(0, state.stats.postsPublished - 1);
+  emit('undo');
+  save();
+}
+
+// Dia perfeito: todas as missões e posts de hoje concluídos (mínimo de 3).
+export function checkPerfectDay() {
+  const key = todayKey();
+  const qs = todayQuests(key);
+  const posts = postsOn(key);
+  const total = qs.length + posts.length;
+  if (total < 3) return;
+  const done = qs.filter((q) => questIsDone(q, key)).length + posts.filter((p) => p.status === 'postado').length;
+  if (done < total) return;
+  if (dailyBonus('perfect', null, 30, 10, 0, 'Dia perfeito')) {
+    state.stats.perfectDays++;
+    emit('perfect');
+    checkAchievements();
+  }
+}
+
 // ---------- objetivos ----------
 export function newGoal(data) {
   return {
@@ -280,6 +387,19 @@ export function reopenGoal(g) {
   save();
 }
 
+const hasQuest = (title) => state.quests.some((q) => q.title.toLowerCase() === String(title).toLowerCase() && !q.archived);
+
+// Cria missões evitando duplicar títulos já existentes.
+export function addQuestsFromTemplates(list, extra = {}) {
+  let n = 0;
+  for (const t of list || []) {
+    if (hasQuest(t.title)) continue;
+    state.quests.push(newQuest({ ...t, ...extra, type: t.type || extra.type || 'daily' }));
+    n++;
+  }
+  return n;
+}
+
 // Cria objetivos e missões a partir dos objetivos sugeridos escolhidos no cadastro.
 export function applyPresets(ids) {
   for (const id of ids) {
@@ -291,9 +411,11 @@ export function applyPresets(ids) {
     });
     state.goals.push(goal);
     for (const q of p.quests || []) {
+      if (hasQuest(q.title)) continue;
       state.quests.push(newQuest({ ...q, sector: q.sector || p.sector, type: q.type || 'daily', goalId: goal.id }));
     }
     for (const h of p.habits || []) {
+      if (hasQuest(h.title)) continue;
       state.quests.push(newQuest({ ...h, sector: h.sector || p.sector, type: 'habit', positive: !h.negative, negative: !!h.negative, goalId: goal.id }));
     }
   }
@@ -317,6 +439,7 @@ export const builtinItem = (id) => BUILTIN_ITEMS.find((i) => i.id === id);
 
 // ---------- conquistas ----------
 export function checkAchievements() {
+  if (!state.player) return;
   for (const a of ACHIEVEMENTS) {
     if (state.achievements[a.id]) continue;
     let ok = false;

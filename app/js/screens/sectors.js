@@ -7,6 +7,8 @@ import { attrInfo, dailyBonus, reward, revoke, questIsDone, checkAchievements } 
 import { todayKey, fmtDate, weekKey, addDays, monthKey, monthLabel, shiftMonth, WEEKDAYS_1, weekday, pad } from '../dates.js';
 import { questRow, habitRow } from './quests.js';
 import { route, rerender, go } from '../nav.js';
+import { contentModule } from './content.js';
+import { houseModule } from './group.js';
 import { play } from '../sfx.js';
 
 export function renderSectors() {
@@ -18,11 +20,13 @@ export function renderSectors() {
       const a = attrInfo(state.player.attrs[s.attr]);
       const qs = state.quests.filter((q) => q.sector === id && !q.archived && q.type !== 'habit');
       const done = qs.filter((q) => questIsDone(q, key)).length;
+      const ps = id === 'conteudo' ? state.content.posts.filter((x) => x.date === key) : null;
+      const label = ps ? `${ps.filter((x) => x.status === 'postado').length}/${ps.length} posts hoje` : `${done}/${qs.length} missões`;
       return `<button class="sector-card panel" data-act="go" data-tab="setores" data-sector="${id}" style="--c:${s.color}">
         <div class="sc-top">${icon(s.icon, 28)}<span class="sc-lvl">${ATTRS[s.attr].short} ${a.level}</span></div>
         <b>${s.name}</b><small>${s.desc}</small>
         ${bar(a.cur, a.need, 'attr', false)}
-        <small class="muted">${done}/${qs.length} missões</small></button>`;
+        <small class="muted">${label}</small></button>`;
     }).join('')}</div>
     <button class="btn btn-wide" data-act="sectors-manage">${icon('gear', 14)} Gerenciar setores</button>`;
 }
@@ -36,6 +40,7 @@ function renderSector(id) {
   const modules = {
     alimentacao: foodModule, academia: gymModule, trabalho: workModule, financeiro: financeModule,
     sono: sleepModule, estudos: studyModule, mente: mindModule, social: socialModule,
+    conteudo: contentModule, casa: houseModule,
   };
   return `<header class="screen-head sector-head" style="--c:${s.color}">
       <button class="btn-back" data-act="go" data-tab="setores">‹</button>
@@ -48,7 +53,7 @@ function renderSector(id) {
     <h3 class="sec-title">Missões de ${s.name}</h3>
     ${qs.length ? `<div class="list">${qs.map((q) => questRow(q, key)).join('')}</div>` : emptyState('Nenhuma missão neste setor.')}
     ${hs.length ? `<h3 class="sec-title">Hábitos</h3><div class="list">${hs.map((q) => habitRow(q, key)).join('')}</div>` : ''}
-    <div class="row-btns"><button class="btn" data-act="q-new" data-sector="${id}">+ Missão</button><button class="btn" data-act="q-new" data-type="habit" data-sector="${id}">+ Hábito</button><button class="btn" data-act="g-new" data-sector="${id}">+ Objetivo</button></div>`;
+    <div class="row-btns"><button class="btn" data-act="lib-open" data-sector="${id}">${icon('book', 14)} Biblioteca</button><button class="btn" data-act="q-new" data-sector="${id}">+ Missão</button><button class="btn" data-act="q-new" data-type="habit" data-sector="${id}">+ Hábito</button><button class="btn" data-act="g-new" data-sector="${id}">+ Objetivo</button></div>`;
 }
 
 actions['sectors-manage'] = () => {
@@ -415,7 +420,8 @@ forms['journal-save'] = (fd) => {
 
 function socialModule() {
   return `<section class="panel module"><div class="mod-head">${icon('chat', 16)}<b>Ideias de missões sociais</b></div>
-    <ul class="tips"><li>Ligar para alguém da família</li><li>Marcar um café com um amigo</li><li>Elogiar um colega de trabalho</li><li>Participar de um grupo ou evento</li></ul></section>`;
+    <ul class="tips"><li>Mensagem carinhosa para o seu amor</li><li>Ligar para alguém da família</li><li>Marcar um café com um amigo</li><li>Jantar a dois sem celular</li></ul>
+    <button class="btn btn-wide" data-act="lib-open" data-sector="social">${icon('book', 14)} Ver sugestões</button></section>`;
 }
 
 // Barrinhas simples para gráficos pequenos.

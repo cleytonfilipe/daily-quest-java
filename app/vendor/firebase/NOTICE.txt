@@ -1,0 +1,4 @@
+Firebase JavaScript SDK 11.10.0 (firebase-app, firebase-auth, firebase-firestore)
+Copyright Google LLC
+Licenciado sob a Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
+Arquivos copiados do pacote npm "firebase" por tools/vendor-firebase.sh (import do gstatic trocado por import relativo).

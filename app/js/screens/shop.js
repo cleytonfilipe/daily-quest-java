@@ -9,8 +9,7 @@ import { rerender } from '../nav.js';
 
 export function renderShop() {
   const p = state.player;
-  return `<header class="screen-head"><h1>${icon('chest', 20)} Loja</h1><span class="gold-pill">${icon('coin', 14)} ${num(p.gold)}</span></header>
-    <p class="muted small">Gaste o ouro conquistado nas missões com recompensas reais. Você merece!</p>
+  return `<div class="shop-head"><p class="muted small">Gaste o ouro das missões com recompensas reais. Você merece!</p><span class="gold-pill">${icon('coin', 14)} ${num(p.gold)}</span></div>
     <h3 class="sec-title">Itens do herói</h3>
     <div class="shop-grid">${BUILTIN_ITEMS.map((it) => `
       <div class="shop-item panel-inner">${icon(it.icon, 32)}<b>${esc(it.title)}</b><small>${esc(it.desc)}</small>
